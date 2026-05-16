@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { authErrorMessage } from '@/lib/auth-errors';
 import { BRAND_LOGO_SRC } from '@/lib/brand';
 
 function authCallbackUrl(next = '/'): string {
@@ -87,12 +88,20 @@ export function AuthModal() {
         setPendingConfirmEmail(email.trim().toLowerCase());
         setErr('Confirm your email first (check inbox and spam), or resend the link below.');
       } else {
-        setErr(error.message);
+        setErr(authErrorMessage(error));
       }
       return;
     }
     setPendingConfirmEmail(null);
     window.location.href = '/';
+  }
+
+  function switchToLoginTab(email?: string) {
+    document.getElementById('kk-auth-tab-login')?.click();
+    if (email) {
+      const input = document.getElementById('kk-login-email') as HTMLInputElement | null;
+      if (input) input.value = email;
+    }
   }
 
   async function resendConfirmation() {
@@ -108,7 +117,7 @@ export function AuthModal() {
     });
     setLoading(false);
     if (error) {
-      setErr(error.message);
+      setErr(authErrorMessage(error));
       return;
     }
     setOk(`Confirmation email sent again to ${pendingConfirmEmail}. Check spam/junk too.`);
@@ -134,11 +143,15 @@ export function AuthModal() {
     });
     setLoading(false);
     if (error) {
-      setErr(error.message);
+      setErr(authErrorMessage(error));
       return;
     }
     if (data.user?.identities?.length === 0) {
-      setErr('This email is already registered. Sign in instead, or use Forgot password in Supabase if you need help.');
+      setPendingConfirmEmail(email);
+      setErr(
+        'This email is already registered. Use the Log in tab with your password, or tap below to resend confirmation if you never verified.'
+      );
+      switchToLoginTab(email);
       return;
     }
     if (data.session) {
@@ -190,10 +203,10 @@ export function AuthModal() {
             </button>
           </div>
           <div className="modal-body pt-2">
-            {err ? (
+            {err && err.trim() !== "{}" ? (
               <div className="alert alert-danger py-2 small" role="alert">
                 {err}
-              </div>
+              </motion.div>
             ) : null}
             {pendingConfirmEmail ? (
               <p className="small mb-3">
