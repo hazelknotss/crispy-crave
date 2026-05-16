@@ -1,8 +1,15 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  return updateSession(request);
+/**
+ * Vercel deploys middleware on the Edge runtime. `@supabase/ssr` currently trips
+ * "unsupported modules" there. Session refresh still runs wherever we call
+ * `createClient()` in Server Components / route handlers (layouts, pages).
+ *
+ * When you upgrade to Next.js 15.5+ you can switch back to Node middleware +
+ * `updateSession` from `./lib/supabase/middleware` (see Supabase SSR guide).
+ */
+export function middleware(_request: NextRequest) {
+  return NextResponse.next();
 }
 
 export const config = {
