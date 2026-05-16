@@ -1,7 +1,8 @@
 # Environment & secrets
 .env
-.env.*
-!.env.example
+.env.local
+web/.env.local
+**/.env.sentry-build-plugin
 
 # Dependencies & build
 web/node_modules/
