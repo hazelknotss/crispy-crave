@@ -2,6 +2,8 @@ import { StaffBodyClass } from "@/components/admin/staff-body-class";
 import { StaffTopbar } from "@/components/store/staff-topbar";
 import { requireStaff } from "@/lib/staff-session";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPortalLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
