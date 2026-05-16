@@ -1,21 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getSupabasePublicConfig } from "@/lib/supabase/env";
 
 export function isSupabaseConfigured(): boolean {
-  return !!(
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.length &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length
-  );
+  return getSupabasePublicConfig() !== null;
 }
 
 export async function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
+  const cfg = getSupabasePublicConfig();
+  if (!cfg) {
     throw new Error(
       "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
   }
+  const url = cfg.url;
+  const key = cfg.anonKey;
 
   const cookieStore = await cookies();
 

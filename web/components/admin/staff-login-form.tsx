@@ -29,7 +29,12 @@ export function StaffLoginForm() {
     const { error: signErr } = await supabase.auth.signInWithPassword({ email, password });
     if (signErr) {
       setLoading(false);
-      setErr(signErr.message);
+      const msg = signErr.message;
+      setErr(
+        msg.includes("path") && msg.includes("URL")
+          ? `${msg} — Check NEXT_PUBLIC_SUPABASE_URL in Vercel (and .env.local): use only https://YOUR_REF.supabase.co with no /auth or /rest path.`
+          : msg
+      );
       return;
     }
 
