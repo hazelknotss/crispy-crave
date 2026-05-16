@@ -3,13 +3,9 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { authErrorMessage, ensureAuthErrorText } from '@/lib/auth-errors';
-
-const SIGNUP_TIMEOUT_MS = 20_000;
 import { BRAND_LOGO_SRC } from '@/lib/brand';
 
-function authCallbackUrl(next = '/'): string {
-  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-}
+const SIGNUP_TIMEOUT_MS = 20_000;
 
 export function AuthModalOpener() {
   useEffect(() => {
