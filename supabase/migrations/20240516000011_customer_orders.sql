@@ -112,6 +112,5 @@ create policy "order_messages_rider_insert"
     )
   );
 
-grant select, update on public.orders to authenticated;
-grant select on public.order_items to authenticated;
+-- Grants already applied in 20240516000004_orders_rider.sql for orders/order_items.
 grant select, insert, update on public.order_messages to authenticated;
