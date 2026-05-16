@@ -1,70 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { staffSignIn } from "@/app/admin/actions";
 import { BRAND_LOGO_SRC } from "@/lib/brand";
 
 const KITCHEN_BG = "/images/kitchen.jpg";
 
 export function StaffLoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [pending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
 
   const required = searchParams.get("required") === "1";
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErr(null);
-    setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "");
-    const password = String(fd.get("password") ?? "");
-    const supabase = createClient();
-
-    const { error: signErr } = await supabase.auth.signInWithPassword({ email, password });
-    if (signErr) {
-      setLoading(false);
-      const msg = signErr.message;
-      setErr(
-        msg.includes("path") && msg.includes("URL")
-          ? `${msg} — Check NEXT_PUBLIC_SUPABASE_URL in Vercel (and .env.local): use only https://YOUR_REF.supabase.co with no /auth or /rest path.`
-          : msg
-      );
-      return;
-    }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      setErr("Could not load session.");
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const role = profile?.role as string | undefined;
-    if (role !== "admin" && role !== "restaurant") {
-      await supabase.auth.signOut();
-      setLoading(false);
-      setErr(
-        "This account is not kitchen staff. Use the storefront sign-in to order food, or ask an admin to set your role to admin or restaurant in Supabase.",
-      );
-      return;
-    }
-
-    router.push("/admin");
-    router.refresh();
+    startTransition(async () => {
+      const result = await staffSignIn(fd);
+      if (result && "error" in result) {
+        setErr(result.error);
+      }
+    });
   }
 
   return (
@@ -165,10 +126,10 @@ export function StaffLoginForm() {
               <button
                 type="submit"
                 className="btn btn-dark w-100 fw-semibold rider-login-submit admin-login-submit"
-                disabled={loading}
+                disabled={pending}
               >
                 <i className="bi bi-box-arrow-in-right me-2" aria-hidden="true" />
-                {loading ? "Signing in…" : "Sign in"}
+                {pending ? "Signing in…" : "Sign in"}
               </button>
             </form>
 
