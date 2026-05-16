@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabasePublicConfig } from "@/lib/supabase/env";
+import { fetchProfileRole } from "@/lib/supabase/profile-role";
 import { getStaffSession, staffShopId, type StaffSession } from "@/lib/staff-session";
 
 export type StaffSignInResult = { error: string } | { ok: true };
@@ -36,25 +37,23 @@ export async function staffSignIn(formData: FormData): Promise<StaffSignInResult
     return { error: "Could not load session after sign-in." };
   }
 
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { role, error: profileErr } = await fetchProfileRole(
+    user.id,
+    authData.session?.access_token
+  );
 
   if (profileErr) {
     await supabase.auth.signOut();
-    return { error: `Could not load your profile: ${profileErr.message}` };
+    return { error: `Could not load your profile: ${profileErr}` };
   }
 
-  const role = profile?.role as string | undefined;
   if (role !== "admin" && role !== "restaurant") {
     await supabase.auth.signOut();
     const cfg = getSupabasePublicConfig();
     const projectHint = cfg?.url
       ? ` Connected project: ${new URL(cfg.url).hostname}.`
       : "";
-    if (!profile) {
+    if (!role) {
       return {
         error:
           `No profile row for ${email} (user id ${user.id}).` +
@@ -64,7 +63,7 @@ export async function staffSignIn(formData: FormData): Promise<StaffSignInResult
     }
     return {
       error:
-        `Signed in as ${email}, but role is "${role ?? "unknown"}" (need admin or restaurant).` +
+        `Signed in as ${email}, but role is "${role}" (need admin or restaurant).` +
         ` Update profiles for user id ${user.id}, or sign in with admin@crispy.com if you use the demo admin.` +
         projectHint,
     };

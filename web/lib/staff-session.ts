@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { fetchStaffProfile } from "@/lib/supabase/profile-role";
 
 export type StaffSession = {
   userId: string;
@@ -20,13 +21,19 @@ export async function getStaffSession(): Promise<StaffSession | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, role, restaurant_id")
-    .eq("id", user.id)
-    .maybeSingle();
+  let profile = (await fetchStaffProfile(user.id)).profile;
+
+  if (!profile) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("display_name, role, restaurant_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    profile = data as typeof profile;
+  }
 
   if (!profile) return null;
+
   const role = profile.role as string;
   if (role !== "admin" && role !== "restaurant") return null;
 
