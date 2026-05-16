@@ -1,4 +1,5 @@
--- Run in Supabase → SQL Editor if staff login says "not kitchen staff".
+-- Run in Supabase → SQL Editor if staff login fails on role.
+-- If you see "infinite recursion" on profiles, run fix-profiles-rls-recursion.sql first.
 -- Promotes demo accounts by email (same as scripts/seed-portal-users.ps1).
 
 update public.profiles p
