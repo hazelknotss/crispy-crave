@@ -206,7 +206,7 @@ export function AuthModal() {
             {err && err.trim() !== "{}" ? (
               <div className="alert alert-danger py-2 small" role="alert">
                 {err}
-              </motion.div>
+              </div>
             ) : null}
             {pendingConfirmEmail ? (
               <p className="small mb-3">
