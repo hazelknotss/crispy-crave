@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { authErrorMessage } from '@/lib/auth-errors';
+import { authErrorMessage, ensureAuthErrorText } from '@/lib/auth-errors';
+
+const SIGNUP_TIMEOUT_MS = 20_000;
 import { BRAND_LOGO_SRC } from '@/lib/brand';
 
 function authCallbackUrl(next = '/'): string {
@@ -109,18 +111,37 @@ export function AuthModal() {
     setErr(null);
     setOk(null);
     setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: pendingConfirmEmail,
-      options: { emailRedirectTo: authCallbackUrl('/') },
-    });
-    setLoading(false);
-    if (error) {
-      setErr(authErrorMessage(error));
-      return;
+    try {
+      const ac = new AbortController();
+      const timer = window.setTimeout(() => ac.abort(), SIGNUP_TIMEOUT_MS);
+      const res = await fetch('/api/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingConfirmEmail }),
+        signal: ac.signal,
+      });
+      window.clearTimeout(timer);
+      const body: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        setErr(ensureAuthErrorText((body as { error?: unknown })?.error));
+        if ((body as { code?: string })?.code === 'already_registered') {
+          switchToLoginTab(pendingConfirmEmail);
+        }
+        return;
+      }
+      setOk(
+        ensureAuthErrorText((body as { message?: unknown })?.message) ||
+          `Confirmation email sent to ${pendingConfirmEmail}. Check spam/junk.`
+      );
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setErr('Request timed out. Try again or use Log in if you already have an account.');
+      } else {
+        setErr('Could not resend email. Try again.');
+      }
+    } finally {
+      setLoading(false);
     }
-    setOk(`Confirmation email sent again to ${pendingConfirmEmail}. Check spam/junk too.`);
   }
 
   async function onRegister(e: React.FormEvent<HTMLFormElement>) {
@@ -132,36 +153,48 @@ export function AuthModal() {
     const email = String(fd.get('email') ?? '').trim().toLowerCase();
     const password = String(fd.get('password') ?? '');
     const name = String(fd.get('name') ?? '');
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { display_name: name },
-        emailRedirectTo: authCallbackUrl('/'),
-      },
-    });
-    setLoading(false);
-    if (error) {
-      setErr(authErrorMessage(error));
-      return;
-    }
-    if (data.user?.identities?.length === 0) {
-      setPendingConfirmEmail(email);
-      setErr(
-        'This email is already registered. Use the Log in tab with your password, or tap below to resend confirmation if you never verified.'
+
+    try {
+      const ac = new AbortController();
+      const timer = window.setTimeout(() => ac.abort(), SIGNUP_TIMEOUT_MS);
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+        signal: ac.signal,
+      });
+      window.clearTimeout(timer);
+      const body: unknown = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const message = ensureAuthErrorText((body as { error?: unknown })?.error);
+        setErr(message);
+        if (res.status === 409 || (body as { code?: string })?.code === 'already_registered') {
+          setPendingConfirmEmail(email);
+          switchToLoginTab(email);
+        }
+        return;
+      }
+
+      setPendingConfirmEmail(null);
+      setOk(
+        ensureAuthErrorText((body as { message?: unknown })?.message) ||
+          'Account created. Use the Log in tab with your email and password.'
       );
       switchToLoginTab(email);
-      return;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setErr(
+          'Sign-up timed out (email server may be slow). If you already tried before, use Log in — your account may exist.'
+        );
+        setPendingConfirmEmail(email);
+        switchToLoginTab(email);
+      } else {
+        setErr('Network error. Check your connection and try again.');
+      }
+    } finally {
+      setLoading(false);
     }
-    if (data.session) {
-      window.location.href = '/';
-      return;
-    }
-    setPendingConfirmEmail(email);
-    setOk(
-      `We sent a confirmation link to ${email}. Open it to activate your account (check spam/junk). Then sign in.`
-    );
   }
 
   return (
@@ -203,7 +236,7 @@ export function AuthModal() {
             </button>
           </div>
           <div className="modal-body pt-2">
-            {err && err.trim() !== "{}" ? (
+            {typeof err === "string" && err.trim().length > 0 && err.trim() !== "{}" ? (
               <div className="alert alert-danger py-2 small" role="alert">
                 {err}
               </div>

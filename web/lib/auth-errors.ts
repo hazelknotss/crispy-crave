@@ -1,3 +1,15 @@
+/** Coerce API/Supabase errors to a safe string (never show "{}" or [object Object]). */
+export function ensureAuthErrorText(value: unknown): string {
+  if (typeof value === "string") {
+    const t = value.trim();
+    if (t.length > 0 && t !== "{}") return t;
+  }
+  if (value && typeof value === "object") {
+    return authErrorMessage(value);
+  }
+  return "Something went wrong. Please try again.";
+}
+
 /** Human-readable text from Supabase Auth errors (avoids showing "{}" in the UI). */
 export function authErrorMessage(error: unknown): string {
   if (!error || typeof error !== "object") {
