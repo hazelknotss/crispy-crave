@@ -4,11 +4,17 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { BRAND_LOGO_SRC } from '@/lib/brand';
 
+function authCallbackUrl(next = '/'): string {
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+}
+
 export function AuthModalOpener() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const needOpen =
-      params.get('login') === 'required' || params.get('auth') === 'login';
+      params.get('login') === 'required' ||
+      params.get('auth') === 'login' ||
+      params.get('auth') === 'error';
     if (!needOpen) return;
 
     let attempts = 0;
@@ -22,6 +28,7 @@ export function AuthModalOpener() {
         window.clearInterval(id);
         params.delete('login');
         params.delete('auth');
+        params.delete('message');
         const qs = params.toString();
         const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash || ''}`;
         window.history.replaceState({}, '', next);
@@ -40,8 +47,17 @@ export function AuthModal() {
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auth') === 'error') {
+      const msg = params.get('message');
+      setErr(msg ? decodeURIComponent(msg) : 'Sign-in link expired or invalid. Try again.');
+    }
+  }, []);
 
   useEffect(() => {
     const el = document.getElementById('kkAuthModal');
@@ -66,10 +82,36 @@ export function AuthModal() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes('email not confirmed') || msg.includes('not verified')) {
+        setPendingConfirmEmail(email.trim().toLowerCase());
+        setErr('Confirm your email first (check inbox and spam), or resend the link below.');
+      } else {
+        setErr(error.message);
+      }
+      return;
+    }
+    setPendingConfirmEmail(null);
+    window.location.href = '/';
+  }
+
+  async function resendConfirmation() {
+    if (!pendingConfirmEmail) return;
+    setErr(null);
+    setOk(null);
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: pendingConfirmEmail,
+      options: { emailRedirectTo: authCallbackUrl('/') },
+    });
+    setLoading(false);
+    if (error) {
       setErr(error.message);
       return;
     }
-    window.location.href = '/';
+    setOk(`Confirmation email sent again to ${pendingConfirmEmail}. Check spam/junk too.`);
   }
 
   async function onRegister(e: React.FormEvent<HTMLFormElement>) {
@@ -78,21 +120,35 @@ export function AuthModal() {
     setOk(null);
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get('email') ?? '');
+    const email = String(fd.get('email') ?? '').trim().toLowerCase();
     const password = String(fd.get('password') ?? '');
     const name = String(fd.get('name') ?? '');
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: name } },
+      options: {
+        data: { display_name: name },
+        emailRedirectTo: authCallbackUrl('/'),
+      },
     });
     setLoading(false);
     if (error) {
       setErr(error.message);
       return;
     }
-    setOk('Check your email to confirm, then sign in.');
+    if (data.user?.identities?.length === 0) {
+      setErr('This email is already registered. Sign in instead, or use Forgot password in Supabase if you need help.');
+      return;
+    }
+    if (data.session) {
+      window.location.href = '/';
+      return;
+    }
+    setPendingConfirmEmail(email);
+    setOk(
+      `We sent a confirmation link to ${email}. Open it to activate your account (check spam/junk). Then sign in.`
+    );
   }
 
   return (
@@ -139,8 +195,20 @@ export function AuthModal() {
                 {err}
               </div>
             ) : null}
+            {pendingConfirmEmail ? (
+              <p className="small mb-3">
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm p-0 align-baseline"
+                  disabled={loading}
+                  onClick={() => void resendConfirmation()}
+                >
+                  Resend confirmation email
+                </button>
+              </p>
+            ) : null}
             {ok ? (
-              <div className="alert alert-success py-2 small" role="alert">
+              <div className="alert alert-success py-2 small" role="status">
                 {ok}
               </div>
             ) : null}
