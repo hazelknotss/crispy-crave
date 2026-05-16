@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchCustomerOrders } from "@/lib/customer-orders-fetch";
+import { customerChatUnreadByOrder } from "@/lib/order-messages";
 import { MyOrdersView } from "@/components/store/my-orders-view";
 import { CancelOrderModal } from "@/components/store/cancel-order-modal";
-import type { CustomerOrderRow } from "@/lib/customer-orders";
+import type { CustomerOrderWithMeta } from "@/components/store/my-orders-view";
+
+export const dynamic = "force-dynamic";
 
 type Search = Promise<{
   cancelled?: string;
@@ -26,32 +30,20 @@ export default async function MyOrdersPage({ searchParams }: { searchParams: Sea
   if (role === "admin" || role === "restaurant") redirect("/admin");
   if (role === "rider") redirect("/rider");
 
-  const { data: raw, error } = await supabase
-    .from("orders")
-    .select(
-      "id, customer_id, customer_display_name, shop_id, total, payment_method, payment_status, order_status, delivery_status, delivery_address, barangay, rider_id, cancel_reason, created_at, restaurants(name)"
-    )
-    .eq("customer_id", user.id)
-    .order("created_at", { ascending: false });
+  const { orders: rawOrders, loadError, usedAdminFallback } = await fetchCustomerOrders(user.id);
 
-  if (error) {
-    return (
-      <>
-        <main className="my-orders-page">
-          <div className="my-orders-page__inner">
-            <h1 className="my-orders-page__title">My orders</h1>
-            <p className="alert alert-warning">
-              Could not load orders. Run <code>supabase/fix-customer-orders.sql</code> in the SQL
-              Editor, then refresh.
-            </p>
-          </div>
-        </main>
-        <CancelOrderModal />
-      </>
-    );
+  const orderIds = rawOrders.map((o) => o.id);
+  let unreadMap = new Map<number, number>();
+  try {
+    unreadMap = await customerChatUnreadByOrder(supabase, orderIds);
+  } catch {
+    unreadMap = new Map();
   }
 
-  const orders = (raw as unknown as CustomerOrderRow[] | null) ?? [];
+  const orders: CustomerOrderWithMeta[] = rawOrders.map((o) => ({
+    ...o,
+    chatUnread: o.rider_id ? (unreadMap.get(o.id) ?? 0) : 0,
+  }));
 
   const sp = await searchParams;
   let flash: { kind: "success" | "warning"; message: string } | null = null;
@@ -63,6 +55,20 @@ export default async function MyOrdersPage({ searchParams }: { searchParams: Sea
     flash = { kind: "warning", message: "Please add a note when you select Other." };
   } else if (sp.cancel_error) {
     flash = { kind: "warning", message: "Could not cancel. Please try again." };
+  }
+
+  if (loadError) {
+    flash = {
+      kind: "warning",
+      message:
+        "Could not load orders with your account permissions. Run supabase/fix-customer-orders-policies-only.sql in the SQL Editor (role: postgres).",
+    };
+  } else if (usedAdminFallback) {
+    flash = {
+      kind: "warning",
+      message:
+        "Orders loaded via server key — add customer RLS policies in Supabase (fix-customer-orders-policies-only.sql) for normal access.",
+    };
   }
 
   return (

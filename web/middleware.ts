@@ -10,6 +10,21 @@ function normalizeSupabaseUrl(raw: string): string {
 
 /** Refresh Supabase auth cookies on every navigation (required for staff portal RSC). */
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  if (pathname === "/order-track.php") {
+    const id = searchParams.get("id");
+    if (id) {
+      return NextResponse.redirect(new URL(`/order-track/${id}`, request.url));
+    }
+  }
+  if (pathname === "/order-chat.php") {
+    const id = searchParams.get("id");
+    if (id) {
+      return NextResponse.redirect(new URL(`/order-chat/${id}`, request.url));
+    }
+  }
+
   let response = NextResponse.next({ request });
 
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

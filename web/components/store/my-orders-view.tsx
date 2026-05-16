@@ -6,8 +6,12 @@ import {
   type CustomerOrderRow,
 } from "@/lib/customer-orders";
 
+export type CustomerOrderWithMeta = CustomerOrderRow & {
+  chatUnread?: number;
+};
+
 type Props = {
-  orders: CustomerOrderRow[];
+  orders: CustomerOrderWithMeta[];
   flash?: { kind: "success" | "warning"; message: string } | null;
 };
 
@@ -49,6 +53,7 @@ export function MyOrdersView({ orders, flash }: Props) {
               const steps = customerTrackingSteps(order);
               const canCancel = customerCanCancel(order);
               const shopName = order.restaurants?.name ?? "Shop";
+              const unread = order.chatUnread ?? 0;
 
               return (
                 <li
@@ -68,7 +73,10 @@ export function MyOrdersView({ orders, flash }: Props) {
                   <p className="my-orders-card__status">{customerDeliveryStatusLabel(order)}</p>
 
                   {!isCancelled ? (
-                    <ol className="my-orders-mini-track" aria-label={`Order progress for order ${orderId}`}>
+                    <ol
+                      className="my-orders-mini-track"
+                      aria-label={`Order progress for order ${orderId}`}
+                    >
                       {steps
                         .filter((s) => s.key !== "cancelled")
                         .map((step) => (
@@ -113,9 +121,14 @@ export function MyOrdersView({ orders, flash }: Props) {
                     {order.rider_id && !isCancelled ? (
                       <Link
                         href={`/order-chat/${orderId}`}
-                        className="btn btn-sm btn-outline-dark my-orders-msg-btn"
+                        className="btn btn-sm btn-outline-dark my-orders-msg-btn position-relative"
                       >
                         <i className="bi bi-chat-dots" aria-hidden="true" />
+                        {unread > 0 ? (
+                          <span className="my-orders-msg-badge">
+                            {unread > 9 ? "9+" : unread}
+                          </span>
+                        ) : null}
                       </Link>
                     ) : null}
                     {canCancel ? (

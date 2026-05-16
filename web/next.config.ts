@@ -12,6 +12,15 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      { source: "/my-orders.php", destination: "/my-orders", permanent: true },
+      { source: "/profile.php", destination: "/profile", permanent: true },
+      { source: "/cart.php", destination: "/cart", permanent: true },
+      { source: "/checkout.php", destination: "/checkout", permanent: true },
+      { source: "/login.php", destination: "/?login=required", permanent: false },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);
