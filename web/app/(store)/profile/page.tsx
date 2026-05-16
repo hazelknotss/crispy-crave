@@ -25,9 +25,8 @@ export default async function ProfilePage({
   if (pe || !profile) redirect("/?login=required");
 
   const role = profile.role as string;
-  if (role !== "user") {
-    redirect(role === "rider" ? "/rider" : "/");
-  }
+  if (role === "rider") redirect("/rider");
+  if (role === "admin" || role === "restaurant") redirect("/admin");
 
   const displayName =
     (profile.display_name as string | null)?.trim() || user.email?.split("@")[0] || "Customer";

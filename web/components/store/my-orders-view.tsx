@@ -1,0 +1,140 @@
+import Link from "next/link";
+import {
+  customerCanCancel,
+  customerDeliveryStatusLabel,
+  customerTrackingSteps,
+  type CustomerOrderRow,
+} from "@/lib/customer-orders";
+
+type Props = {
+  orders: CustomerOrderRow[];
+  flash?: { kind: "success" | "warning"; message: string } | null;
+};
+
+export function MyOrdersView({ orders, flash }: Props) {
+  return (
+    <main className="my-orders-page">
+      <div className="my-orders-page__inner">
+        <header className="my-orders-page__intro">
+          <p className="my-orders-page__kicker">Your account</p>
+          <h1 className="my-orders-page__title">My orders</h1>
+          <p className="my-orders-page__lede">
+            Track delivery status or cancel while your order is still being prepared.
+          </p>
+        </header>
+
+        {flash ? (
+          <div
+            className={`alert alert-${flash.kind === "success" ? "success" : "warning"} mb-3`}
+            role={flash.kind === "success" ? "status" : "alert"}
+          >
+            {flash.message}
+          </div>
+        ) : null}
+
+        {orders.length === 0 ? (
+          <div className="my-orders-empty-card" role="status">
+            <i className="bi bi-inbox my-orders-empty__icon" aria-hidden="true" />
+            <p className="my-orders-empty__text">You have no orders yet.</p>
+            <Link href="/#shops" className="btn btn-sm btn-dark my-orders-empty__cta">
+              Browse shops
+            </Link>
+          </div>
+        ) : (
+          <ul className="my-orders-list">
+            {orders.map((order) => {
+              const orderId = order.id;
+              const statusKey = String(order.order_status ?? "").toLowerCase();
+              const isCancelled = statusKey === "cancelled";
+              const steps = customerTrackingSteps(order);
+              const canCancel = customerCanCancel(order);
+              const shopName = order.restaurants?.name ?? "Shop";
+
+              return (
+                <li
+                  key={orderId}
+                  className={`my-orders-card${isCancelled ? " my-orders-card--cancelled" : ""}`}
+                >
+                  <div className="my-orders-card__top">
+                    <div>
+                      <p className="my-orders-card__id mb-0">Order #{orderId}</p>
+                      <p className="my-orders-card__shop mb-0">{shopName}</p>
+                    </div>
+                    <p className="my-orders-card__total tabular-nums mb-0">
+                      ₱{Number(order.total).toFixed(2)}
+                    </p>
+                  </div>
+
+                  <p className="my-orders-card__status">{customerDeliveryStatusLabel(order)}</p>
+
+                  {!isCancelled ? (
+                    <ol className="my-orders-mini-track" aria-label={`Order progress for order ${orderId}`}>
+                      {steps
+                        .filter((s) => s.key !== "cancelled")
+                        .map((step) => (
+                          <li
+                            key={step.key}
+                            className={`my-orders-mini-track__step my-orders-mini-track__step--${step.state}`}
+                            title={step.label}
+                          >
+                            <span className="visually-hidden">{step.label}</span>
+                          </li>
+                        ))}
+                    </ol>
+                  ) : (
+                    <p className="small text-muted mb-2">
+                      {order.cancel_reason ?? "Order cancelled"}
+                    </p>
+                  )}
+
+                  <p className="my-orders-card__meta small text-muted mb-0">
+                    {new Date(order.created_at).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                    {" · "}
+                    {String(order.payment_method).toUpperCase()}
+                    {order.payment_status === "paid" ? (
+                      <>
+                        {" · "}
+                        <span className="text-success">Paid</span>
+                      </>
+                    ) : null}
+                  </p>
+
+                  <div className="my-orders-card__actions">
+                    <Link href={`/order-track/${orderId}`} className="btn btn-sm btn-dark">
+                      <i className="bi bi-geo-alt me-1" aria-hidden="true" />
+                      Track order
+                    </Link>
+                    {order.rider_id && !isCancelled ? (
+                      <Link
+                        href={`/order-chat/${orderId}`}
+                        className="btn btn-sm btn-outline-dark my-orders-msg-btn"
+                      >
+                        <i className="bi bi-chat-dots" aria-hidden="true" />
+                      </Link>
+                    ) : null}
+                    {canCancel ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger"
+                        data-kk-cancel-order={orderId}
+                        data-kk-cancel-redirect="/my-orders"
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </main>
+  );
+}
