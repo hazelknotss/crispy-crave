@@ -1,0 +1,43 @@
+{
+  "faqs": [
+    {
+      "id": "place_order",
+      "question": "How do I place an order?",
+      "keywords": ["place", "order", "menu", "cart", "checkout", "buy"],
+      "aliases": ["how to order"],
+      "answer": "Choose items from the menu, add them to your cart, then open your cart to review and checkout."
+    },
+    {
+      "id": "payment",
+      "question": "What payment methods can I use?",
+      "keywords": ["pay", "payment", "cod", "cash", "gcash"],
+      "aliases": ["how to pay"],
+      "answer": "You can pay with Cash on Delivery (COD) or GCash at checkout."
+    },
+    {
+      "id": "delivery",
+      "question": "Can I have my order delivered?",
+      "keywords": ["deliver", "delivery", "rider", "address"],
+      "aliases": ["home delivery"],
+      "answer": "Yes. Choose delivery at checkout and enter your address in Pototan, Iloilo."
+    },
+    {
+      "id": "account",
+      "question": "Do I need an account?",
+      "keywords": ["account", "register", "login"],
+      "aliases": ["need an account"],
+      "answer": "Yes — sign in or create a free account to order and track your history."
+    },
+    {
+      "id": "crispy_picks",
+      "question": "What are Crispy Picks?",
+      "keywords": ["picks", "weather", "recommend"],
+      "aliases": ["what should i order"],
+      "answer": "Crispy Picks suggests dishes based on your local weather using your browser location."
+    }
+  ],
+  "greeting": "Hi! I'm Crispy AI, your guide for Crispy Crave. Ask about ordering, delivery, payments, or your account.",
+  "offTopic": "I'm sorry — I can only help with Crispy Crave ordering, delivery, and your account. Try a suggested topic below.",
+  "thanks": "You're welcome! If you need anything else, just ask.",
+  "clarify": "I found a few topics that might match. Which one did you mean?"
+}

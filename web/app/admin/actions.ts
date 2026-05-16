@@ -1,0 +1,158 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { getStaffSession, staffShopId, type StaffSession } from "@/lib/staff-session";
+
+export async function adminAssignRider(formData: FormData): Promise<void> {
+  const staff = await getStaffSession();
+  if (!staff) return;
+
+  const orderId = parseInt(String(formData.get("order_id") ?? ""), 10);
+  const riderRaw = String(formData.get("rider_id") ?? "").trim();
+  if (!Number.isFinite(orderId) || orderId < 1) {
+    return;
+  }
+
+  const shopScope = staffShopId(staff);
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, shop_id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order) return;
+  if (shopScope !== null && order.shop_id !== shopScope) {
+    return;
+  }
+
+  const riderId = riderRaw === "" ? null : riderRaw;
+
+  const { error } = await supabase.from("orders").update({ rider_id: riderId }).eq("id", orderId);
+
+  if (error) {
+    console.error("adminAssignRider", error.message);
+    return;
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+}
+
+export async function adminUpdateOrderStatus(formData: FormData): Promise<void> {
+  const staff = await getStaffSession();
+  if (!staff) return;
+
+  const orderId = parseInt(String(formData.get("order_id") ?? ""), 10);
+  const order_status = String(formData.get("order_status") ?? "").trim();
+  const allowed = ["pending", "preparing", "delivering", "completed", "cancelled"];
+  if (!Number.isFinite(orderId) || orderId < 1 || !allowed.includes(order_status)) {
+    return;
+  }
+
+  const shopScope = staffShopId(staff);
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, shop_id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order) return;
+  if (shopScope !== null && order.shop_id !== shopScope) {
+    return;
+  }
+
+  const { error } = await supabase.from("orders").update({ order_status }).eq("id", orderId);
+  if (error) {
+    console.error("adminUpdateOrderStatus", error.message);
+    return;
+  }
+
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${orderId}`);
+}
+
+function assertMenuShop(staff: StaffSession | null, shopId: number): string | null {
+  if (!staff) return "Not signed in";
+  if (!Number.isFinite(shopId) || shopId < 1) return "Invalid shop";
+  const scope = staffShopId(staff);
+  if (scope !== null && scope !== shopId) return "Not allowed for this shop";
+  return null;
+}
+
+export async function createMenuItem(formData: FormData) {
+  const staff = await getStaffSession();
+  const shopId = parseInt(String(formData.get("shop_id") ?? ""), 10);
+  const denied = assertMenuShop(staff, shopId);
+  if (denied) return { error: denied };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const priceRaw = String(formData.get("price") ?? "").trim();
+  const image = String(formData.get("image") ?? "").trim() || null;
+  const price = parseFloat(priceRaw);
+
+  if (name.length < 1 || !Number.isFinite(price)) {
+    return { error: "Name and valid price required" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("menus").insert({
+    restaurant_id: shopId,
+    name,
+    description,
+    price,
+    image,
+    is_active: true,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/admin/menus");
+  return { ok: true as const, shopId };
+}
+
+export async function updateMenuItem(formData: FormData) {
+  const staff = await getStaffSession();
+  if (!staff) return { error: "Not signed in" };
+
+  const menuId = parseInt(String(formData.get("menu_id") ?? ""), 10);
+  const shopId = parseInt(String(formData.get("shop_id") ?? ""), 10);
+  if (!Number.isFinite(menuId) || menuId < 1) {
+    return { error: "Invalid menu" };
+  }
+
+  const denied = assertMenuShop(staff, shopId);
+  if (denied) return { error: denied };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const price = parseFloat(String(formData.get("price") ?? ""));
+  const image = String(formData.get("image") ?? "").trim() || null;
+  if (name.length < 1 || !Number.isFinite(price)) {
+    return { error: "Invalid fields" };
+  }
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("menus")
+    .select("id, restaurant_id")
+    .eq("id", menuId)
+    .maybeSingle();
+  if (!existing || existing.restaurant_id !== shopId) {
+    return { error: "Menu not found" };
+  }
+
+  const { error } = await supabase
+    .from("menus")
+    .update({ name, description, price, image })
+    .eq("id", menuId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin/menus");
+  return { ok: true as const, shopId };
+}

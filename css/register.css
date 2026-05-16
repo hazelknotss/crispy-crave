@@ -1,0 +1,163 @@
+/* Auth — Crispy Crave (minimal, matches storefront) */
+
+html {
+    font-size: 112.5%;
+}
+
+body {
+    font-family: "Outfit", system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    color: #0a0a0a;
+    -webkit-font-smoothing: antialiased;
+}
+
+.auth-bg {
+    background: #0a0a0a url("../images/download.png") no-repeat center center / cover;
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+}
+
+.auth-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        160deg,
+        rgba(10, 10, 10, 0.88) 0%,
+        rgba(10, 10, 10, 0.65) 45%,
+        rgba(80, 60, 10, 0.45) 100%
+    );
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.navbar {
+    background: rgba(10, 10, 10, 0.55) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.navbar-brand img {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.navbar .btn-light {
+    background: #fff;
+    border: none;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #111;
+}
+
+.navbar .btn-light:hover {
+    background: #f5f5f4;
+    color: #111;
+}
+
+.navbar .btn-outline-light {
+    border-width: 1px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.navbar .btn-outline-light:hover {
+    background: rgba(212, 162, 12, 0.2);
+    border-color: #d4a20c;
+    color: #fff;
+}
+
+.auth-card {
+    max-width: 440px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+}
+
+.auth-card .card {
+    border: none;
+}
+
+.auth-logo {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(10, 10, 10, 0.08);
+    box-shadow: 0 8px 28px rgba(10, 10, 10, 0.1);
+}
+
+.auth-card a.text-decoration-none.fw-semibold {
+    color: #b8860b;
+}
+
+.auth-card a.text-decoration-none.fw-semibold:hover {
+    color: #0a0a0a;
+}
+
+/* Password visibility toggle (login / register pages) */
+.auth-password-group .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.auth-password-group .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-color: rgba(10, 10, 10, 0.15);
+    color: #5c5c5c;
+    padding-inline: 0.65rem;
+}
+
+.auth-password-group .btn:hover {
+    color: #0a0a0a;
+    background: #f5f5f4;
+}
+
+.auth-password-group .form-control:focus {
+    z-index: 1;
+}
+
+.btn-primary {
+    background: #111;
+    border: none;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+    box-shadow: 0 8px 28px rgba(17, 17, 17, 0.25);
+}
+
+.btn-primary:hover {
+    background: #262626;
+    box-shadow: 0 10px 32px rgba(17, 17, 17, 0.3);
+}
+
+footer {
+    background: #0a0a0a;
+    height: auto;
+    min-height: 44px;
+    padding: 14px;
+    position: relative;
+    width: 100%;
+    border-top: 2px solid #d4a20c;
+}

@@ -1,0 +1,11 @@
+# If you use Apache (XAMPP/WAMP) and your phone gets "403 Forbidden", this folder
+# must be allowed for non-localhost clients. This applies when AllowOverride allows .htaccess.
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+</IfModule>
+
+DirectoryIndex index.php index.html

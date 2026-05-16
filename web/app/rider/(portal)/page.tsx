@@ -1,0 +1,34 @@
+import Script from "next/script";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { fetchRiderOrders, fetchRiderProfile } from "@/lib/rider-data";
+import { RiderTopbar } from "@/components/rider/rider-topbar";
+import { RiderDockNav } from "@/components/rider/rider-dock-nav";
+import { RiderDashboard } from "@/components/rider/rider-dashboard";
+
+export default async function RiderHomePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/rider/login");
+
+  const profile = await fetchRiderProfile(supabase, user.id);
+  if (!profile) redirect("/rider/login");
+
+  const orders = await fetchRiderOrders(supabase);
+  const riderName =
+    profile.display_name?.trim() || user.email?.split("@")[0] || "Rider";
+
+  return (
+    <>
+      <RiderTopbar displayName={riderName} />
+      <RiderDashboard orders={orders} riderName={riderName} />
+      <RiderDockNav />
+      <Script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        strategy="lazyOnload"
+      />
+    </>
+  );
+}
